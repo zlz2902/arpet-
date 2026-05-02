@@ -1,0 +1,1004 @@
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AR宠物小精灵</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link
+      href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css"
+      rel="stylesheet"
+    />
+
+    <!-- A-Frame 和 AR.js -->
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+
+    <script>
+      // 注册点击互动组件
+      AFRAME.registerComponent("pokemon-interaction", {
+        init: function () {
+          this.el.addEventListener("click", (evt) => {
+            // 跳跃动画
+            this.el.setAttribute("animation", {
+              property: "position",
+              to: "0 0.5 -2",
+              dur: 500,
+              easing: "easeOutQuad",
+              dir: "alternate",
+              loop: 2,
+            });
+
+            // 播放音效或显示文字（模拟）
+            console.log("你点击了小精灵！");
+            alert("皮卡！皮卡！");
+          });
+        },
+      });
+    </script>
+
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: "#FF0000",
+              secondary: "#3B4CCA",
+              accent: "#FFDE00",
+              dark: "#333333",
+              light: "#F5F5F5",
+            },
+            fontFamily: {
+              sans: ["Inter", "system-ui", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+
+    <style type="text/tailwindcss">
+      @layer utilities {
+        .text-shadow {
+          text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .btn-pokemon {
+          @apply bg-accent text-dark font-bold py-3 px-6 rounded-full shadow-lg transform transition hover:scale-105 hover:shadow-xl;
+        }
+        .card-pokemon {
+          @apply bg-white rounded-2xl shadow-lg p-6 transform transition-all duration-300 hover:shadow-xl;
+        }
+        .gradient-bg {
+          background: linear-gradient(135deg, #ff0000 0%, #3b4cca 100%);
+        }
+      }
+    </style>
+
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+        overflow-x: hidden;
+        font-family: "Inter", sans-serif;
+      }
+
+      #ar-container {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10;
+        display: none;
+      }
+
+      #ar-video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      #canvas {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+      }
+
+      .pokemon-card {
+        perspective: 1000px;
+      }
+
+      .pokemon-card-inner {
+        transition: transform 0.6s;
+        transform-style: preserve-3d;
+      }
+
+      .pokemon-card:hover .pokemon-card-inner {
+        transform: rotateY(10deg) rotateX(5deg);
+      }
+
+      .pokemon-card-front,
+      .pokemon-card-back {
+        backface-visibility: hidden;
+        position: relative;
+      }
+
+      .pokemon-card-back {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        transform: rotateY(180deg);
+      }
+
+      .pokemon-list {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+      }
+
+      .pokemon-list::-webkit-scrollbar {
+        display: none;
+      }
+
+      .pokemon-item {
+        scroll-snap-align: start;
+        flex: 0 0 auto;
+      }
+
+      .loading-screen {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: linear-gradient(135deg, #ff0000 0%, #3b4cca 100%);
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+        transition: opacity 0.5s ease-out;
+      }
+
+      .loading-pokeball {
+        width: 100px;
+        height: 100px;
+        border-radius: 50%;
+        background: #fff;
+        position: relative;
+        animation: bounce 1s infinite alternate;
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+      }
+
+      .loading-pokeball:before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 50%;
+        background: #ff0000;
+        border-radius: 50px 50px 0 0;
+      }
+
+      .loading-pokeball:after {
+        content: "";
+        position: absolute;
+        top: 45px;
+        left: 0;
+        width: 100%;
+        height: 10px;
+        background: #000;
+      }
+
+      .loading-pokeball-center {
+        position: absolute;
+        top: 40px;
+        left: 40px;
+        width: 20px;
+        height: 20px;
+        background: #fff;
+        border: 5px solid #000;
+        border-radius: 50%;
+        z-index: 1;
+      }
+
+      @keyframes bounce {
+        0% {
+          transform: translateY(0);
+        }
+        100% {
+          transform: translateY(-20px);
+        }
+      }
+
+      .btn-action {
+        position: fixed;
+        bottom: 30px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 20;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .btn-action:hover {
+        transform: translateX(-50%) scale(1.1);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+      }
+
+      .btn-close {
+        position: fixed;
+        top: 30px;
+        right: 30px;
+        z-index: 20;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .btn-close:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+      }
+
+      .btn-pokemon-list {
+        position: fixed;
+        bottom: 120px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 20;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+
+      .btn-pokemon-list:hover {
+        transform: translateX(-50%) scale(1.1);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3);
+      }
+
+      .ar-controls {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
+        padding: 20px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 15;
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+      }
+
+      .ar-controls.active {
+        transform: translateY(0);
+      }
+
+      .pokemon-thumbnail {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background: #f0f0f0;
+        margin: 0 10px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        overflow: hidden;
+        border: 3px solid transparent;
+      }
+
+      .pokemon-thumbnail:hover,
+      .pokemon-thumbnail.active {
+        transform: scale(1.1);
+        border-color: #ffde00;
+      }
+
+      .pokemon-thumbnail img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .light-effect {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: radial-gradient(
+          circle at center,
+          rgba(255, 255, 255, 0.2) 0%,
+          transparent 70%
+        );
+        pointer-events: none;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+      }
+
+      .pokemon-card:hover .light-effect {
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body class="bg-gray-100">
+    <!-- 加载屏幕 -->
+    <div class="loading-screen" id="loadingScreen">
+      <div class="loading-pokeball">
+        <div class="loading-pokeball-center"></div>
+      </div>
+      <h2 class="text-white text-2xl font-bold mt-6">
+        正在准备你的AR宠物小精灵...
+      </h2>
+    </div>
+
+    <!-- 主页面 -->
+    <div class="min-h-screen">
+      <!-- 顶部导航 -->
+      <header class="bg-white shadow-md">
+        <div
+          class="container mx-auto px-4 py-4 flex justify-between items-center"
+        >
+          <div class="flex items-center">
+            <div
+              class="w-10 h-10 rounded-full bg-accent flex items-center justify-center mr-3"
+            >
+              <span class="text-dark font-bold text-xl">P</span>
+            </div>
+            <h1 class="text-2xl font-bold text-dark">AR宠物小精灵</h1>
+          </div>
+          <div class="flex items-center space-x-4">
+            <button class="text-dark hover:text-primary transition">
+              <i class="fa fa-cog text-xl"></i>
+            </button>
+            <button class="text-dark hover:text-primary transition">
+              <i class="fa fa-user text-xl"></i>
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <!-- 英雄区域 -->
+      <section class="gradient-bg text-white py-16">
+        <div class="container mx-auto px-4 text-center">
+          <h2 class="text-4xl md:text-5xl font-bold mb-6 text-shadow">
+            在现实世界中遇见宠物小精灵
+          </h2>
+          <p class="text-xl mb-8 max-w-2xl mx-auto">
+            使用增强现实技术，让你喜爱的宠物小精灵出现在你的真实环境中！
+          </p>
+          <button id="startArBtn" class="btn-pokemon">
+            <i class="fa fa-camera mr-2"></i>开始AR体验
+          </button>
+        </div>
+      </section>
+
+      <!-- 特色功能 -->
+      <section class="py-16 bg-white">
+        <div class="container mx-auto px-4">
+          <h2 class="text-3xl font-bold text-center mb-12 text-dark">
+            特色功能
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="card-pokemon text-center">
+              <div
+                class="w-20 h-20 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center"
+              >
+                <i class="fa fa-camera text-primary text-3xl"></i>
+              </div>
+              <h3 class="text-xl font-bold mb-3 text-dark">AR显示</h3>
+              <p class="text-gray-600">
+                通过手机摄像头在真实环境中展示3D宠物小精灵模型
+              </p>
+            </div>
+            <div class="card-pokemon text-center">
+              <div
+                class="w-20 h-20 mx-auto mb-4 rounded-full bg-secondary/10 flex items-center justify-center"
+              >
+                <i class="fa fa-hand-pointer-o text-secondary text-3xl"></i>
+              </div>
+              <h3 class="text-xl font-bold mb-3 text-dark">互动体验</h3>
+              <p class="text-gray-600">
+                支持点击、拖拽等交互，小精灵会有相应的动作和音效反馈
+              </p>
+            </div>
+            <div class="card-pokemon text-center">
+              <div
+                class="w-20 h-20 mx-auto mb-4 rounded-full bg-accent/10 flex items-center justify-center"
+              >
+                <i class="fa fa-users text-accent text-3xl"></i>
+              </div>
+              <h3 class="text-xl font-bold mb-3 text-dark">收集系统</h3>
+              <p class="text-gray-600">
+                提供多种不同的宠物小精灵供你选择和收集
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 热门小精灵 -->
+      <section class="py-16 bg-gray-50">
+        <div class="container mx-auto px-4">
+          <h2 class="text-3xl font-bold text-center mb-12 text-dark">
+            热门小精灵
+          </h2>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- 皮卡丘 -->
+            <div class="pokemon-card">
+              <div class="pokemon-card-inner">
+                <div class="pokemon-card-front card-pokemon">
+                  <div class="light-effect"></div>
+                  <div
+                    class="aspect-w-1 aspect-h-1 mb-4 bg-yellow-100 rounded-xl flex items-center justify-center overflow-hidden"
+                  >
+                    <img
+                      src="https://img.pokemondb.net/artwork/pikachu.jpg"
+                      alt="皮卡丘"
+                      class="object-contain w-full h-full p-4"
+                    />
+                  </div>
+                  <h3 class="text-xl font-bold mb-2 text-dark">皮卡丘</h3>
+                  <div class="flex justify-between items-center mb-4">
+                    <span
+                      class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium"
+                      >电</span
+                    >
+                    <span class="text-gray-500">编号: #025</span>
+                  </div>
+                  <p class="text-gray-600 text-sm mb-4">
+                    皮卡丘是一种电气鼠类宝可梦，它的尾巴是储存电力的器官。
+                  </p>
+                  <button
+                    class="select-pokemon w-full py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition"
+                    data-pokemon="pikachu"
+                  >
+                    选择这个小精灵
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 杰尼龟 -->
+            <div class="pokemon-card">
+              <div class="pokemon-card-inner">
+                <div class="pokemon-card-front card-pokemon">
+                  <div class="light-effect"></div>
+                  <div
+                    class="aspect-w-1 aspect-h-1 mb-4 bg-blue-100 rounded-xl flex items-center justify-center overflow-hidden"
+                  >
+                    <img
+                      src="https://img.pokemondb.net/artwork/squirtle.jpg"
+                      alt="杰尼龟"
+                      class="object-contain w-full h-full p-4"
+                    />
+                  </div>
+                  <h3 class="text-xl font-bold mb-2 text-dark">杰尼龟</h3>
+                  <div class="flex justify-between items-center mb-4">
+                    <span
+                      class="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium"
+                      >水</span
+                    >
+                    <span class="text-gray-500">编号: #007</span>
+                  </div>
+                  <p class="text-gray-600 text-sm mb-4">
+                    杰尼龟是一种小型的龟类宝可梦，它的壳可以喷射高压水流。
+                  </p>
+                  <button
+                    class="select-pokemon w-full py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition"
+                    data-pokemon="squirtle"
+                  >
+                    选择这个小精灵
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 妙蛙种子 -->
+            <div class="pokemon-card">
+              <div class="pokemon-card-inner">
+                <div class="pokemon-card-front card-pokemon">
+                  <div class="light-effect"></div>
+                  <div
+                    class="aspect-w-1 aspect-h-1 mb-4 bg-green-100 rounded-xl flex items-center justify-center overflow-hidden"
+                  >
+                    <img
+                      src="https://img.pokemondb.net/artwork/bulbasaur.jpg"
+                      alt="妙蛙种子"
+                      class="object-contain w-full h-full p-4"
+                    />
+                  </div>
+                  <h3 class="text-xl font-bold mb-2 text-dark">妙蛙种子</h3>
+                  <div class="flex justify-between items-center mb-4">
+                    <span
+                      class="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium"
+                      >草/毒</span
+                    >
+                    <span class="text-gray-500">编号: #001</span>
+                  </div>
+                  <p class="text-gray-600 text-sm mb-4">
+                    妙蛙种子是一种两栖类宝可梦，它的背上长着一个能生长的种子。
+                  </p>
+                  <button
+                    class="select-pokemon w-full py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition"
+                    data-pokemon="bulbasaur"
+                  >
+                    选择这个小精灵
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- 小火龙 -->
+            <div class="pokemon-card">
+              <div class="pokemon-card-inner">
+                <div class="pokemon-card-front card-pokemon">
+                  <div class="light-effect"></div>
+                  <div
+                    class="aspect-w-1 aspect-h-1 mb-4 bg-red-100 rounded-xl flex items-center justify-center overflow-hidden"
+                  >
+                    <img
+                      src="https://img.pokemondb.net/artwork/charmander.jpg"
+                      alt="小火龙"
+                      class="object-contain w-full h-full p-4"
+                    />
+                  </div>
+                  <h3 class="text-xl font-bold mb-2 text-dark">小火龙</h3>
+                  <div class="flex justify-between items-center mb-4">
+                    <span
+                      class="px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium"
+                      >火</span
+                    >
+                    <span class="text-gray-500">编号: #004</span>
+                  </div>
+                  <p class="text-gray-600 text-sm mb-4">
+                    小火龙是一种蜥蜴类宝可梦，它的尾巴尖上有永不熄灭的火焰。
+                  </p>
+                  <button
+                    class="select-pokemon w-full py-2 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition"
+                    data-pokemon="charmander"
+                  >
+                    选择这个小精灵
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 使用教程 -->
+      <section class="py-16 bg-white">
+        <div class="container mx-auto px-4">
+          <h2 class="text-3xl font-bold text-center mb-12 text-dark">
+            使用教程
+          </h2>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+            <div>
+              <div class="space-y-6">
+                <div class="flex">
+                  <div
+                    class="flex-shrink-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold mr-4"
+                  >
+                    1
+                  </div>
+                  <div>
+                    <h3 class="text-xl font-bold mb-2 text-dark">
+                      选择你的小精灵
+                    </h3>
+                    <p class="text-gray-600">
+                      从我们的收藏中选择你喜欢的宠物小精灵
+                    </p>
+                  </div>
+                </div>
+                <div class="flex">
+                  <div
+                    class="flex-shrink-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold mr-4"
+                  >
+                    2
+                  </div>
+                  <div>
+                    <h3 class="text-xl font-bold mb-2 text-dark">
+                      允许相机访问
+                    </h3>
+                    <p class="text-gray-600">授予应用访问你手机摄像头的权限</p>
+                  </div>
+                </div>
+                <div class="flex">
+                  <div
+                    class="flex-shrink-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold mr-4"
+                  >
+                    3
+                  </div>
+                  <div>
+                    <h3 class="text-xl font-bold mb-2 text-dark">放置小精灵</h3>
+                    <p class="text-gray-600">
+                      点击屏幕将小精灵放置在你想要的位置
+                    </p>
+                  </div>
+                </div>
+                <div class="flex">
+                  <div
+                    class="flex-shrink-0 w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white font-bold mr-4"
+                  >
+                    4
+                  </div>
+                  <div>
+                    <h3 class="text-xl font-bold mb-2 text-dark">互动和拍照</h3>
+                    <p class="text-gray-600">
+                      与你的小精灵互动，拍照并分享你的AR体验
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <button id="viewTutorialBtn" class="mt-8 btn-pokemon">
+                <i class="fa fa-play-circle mr-2"></i>观看视频教程
+              </button>
+            </div>
+            <div class="relative">
+              <div
+                class="aspect-w-9 aspect-h-16 bg-gray-100 rounded-xl overflow-hidden shadow-xl"
+              >
+                <img
+                  src="https://img.pokemondb.net/artwork/pikachu.jpg"
+                  alt="AR教程演示"
+                  class="object-cover w-full h-full"
+                />
+                <div class="absolute inset-0 flex items-center justify-center">
+                  <div
+                    class="w-20 h-20 rounded-full bg-white/80 flex items-center justify-center cursor-pointer hover:bg-white transition"
+                  >
+                    <i class="fa fa-play text-primary text-3xl"></i>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 底部区域 -->
+      <footer class="bg-dark text-white py-12">
+        <div class="container mx-auto px-4">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div>
+              <div class="flex items-center mb-4">
+                <div
+                  class="w-10 h-10 rounded-full bg-accent flex items-center justify-center mr-3"
+                >
+                  <span class="text-dark font-bold text-xl">P</span>
+                </div>
+                <h3 class="text-xl font-bold">AR宠物小精灵</h3>
+              </div>
+              <p class="text-gray-400 mb-4">在现实世界中遇见你的宠物小精灵</p>
+              <div class="flex space-x-4">
+                <a href="#" class="text-gray-400 hover:text-white transition">
+                  <i class="fa fa-facebook"></i>
+                </a>
+                <a href="#" class="text-gray-400 hover:text-white transition">
+                  <i class="fa fa-twitter"></i>
+                </a>
+                <a href="#" class="text-gray-400 hover:text-white transition">
+                  <i class="fa fa-instagram"></i>
+                </a>
+                <a href="#" class="text-gray-400 hover:text-white transition">
+                  <i class="fa fa-youtube"></i>
+                </a>
+              </div>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold mb-4">快速链接</h3>
+              <ul class="space-y-2">
+                <li>
+                  <a href="#" class="text-gray-400 hover:text-white transition"
+                    >首页</a
+                  >
+                </li>
+                <li>
+                  <a href="#" class="text-gray-400 hover:text-white transition"
+                    >小精灵图鉴</a
+                  >
+                </li>
+                <li>
+                  <a href="#" class="text-gray-400 hover:text-white transition"
+                    >使用教程</a
+                  >
+                </li>
+                <li>
+                  <a href="#" class="text-gray-400 hover:text-white transition"
+                    >关于我们</a
+                  >
+                </li>
+              </ul>
+            </div>
+            <div>
+              <h3 class="text-lg font-bold mb-4">联系我们</h3>
+              <ul class="space-y-2">
+                <li class="flex items-center">
+                  <i class="fa fa-envelope mr-2 text-gray-400"></i>
+                  <a
+                    href="mailto:info@arpokemon.com"
+                    class="text-gray-400 hover:text-white transition"
+                    >info@arpokemon.com</a
+                  >
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-phone mr-2 text-gray-400"></i>
+                  <a
+                    href="tel:+86123456789"
+                    class="text-gray-400 hover:text-white transition"
+                    >+86 123 456 789</a
+                  >
+                </li>
+                <li class="flex items-center">
+                  <i class="fa fa-map-marker mr-2 text-gray-400"></i>
+                  <span class="text-gray-400">北京市海淀区中关村</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div
+            class="border-t border-gray-800 mt-8 pt-8 text-center text-gray-500"
+          >
+            <p>© 2026 AR宠物小精灵. 保留所有权利.</p>
+          </div>
+        </div>
+      </footer>
+    </div>
+
+    <!-- AR 场景容器 -->
+    <div id="ar-container" style="display: none">
+      <a-scene
+        embedded
+        arjs="sourceType: webcam; debugUIEnabled: false;"
+        vr-mode-ui="enabled: false"
+        renderer="logarithmicDepthBuffer: true;"
+      >
+        <a-assets>
+          <!-- 这里可以放置你的小精灵模型 -->
+          <a-asset-item
+            id="pokemon-model"
+            src="https://raw.githack.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb"
+          ></a-asset-item>
+        </a-assets>
+
+        <!-- 简单的位置标记 AR：小精灵会出现在镜头前方 -->
+        <a-entity
+          id="pokemon-entity"
+          gltf-model="#pokemon-model"
+          position="0 0 -2"
+          scale="0.5 0.5 0.5"
+          pokemon-interaction
+          animation__rotate="property: rotation; to: 0 360 0; loop: true; dur: 10000; easing: linear"
+        >
+        </a-entity>
+
+        <a-entity camera>
+          <a-cursor
+            fuse="false"
+            raycaster="objects: [pokemon-interaction]"
+          ></a-cursor>
+        </a-entity>
+      </a-scene>
+
+      <!-- AR控制按钮 -->
+      <button class="btn-close" id="closeArBtn">
+        <i class="fa fa-times text-dark text-xl"></i>
+      </button>
+
+      <button class="btn-pokemon-list" id="togglePokemonListBtn">
+        <i class="fa fa-th-large text-dark text-xl"></i>
+      </button>
+
+      <button class="btn-action" id="captureBtn">
+        <i class="fa fa-camera text-dark text-xl"></i>
+      </button>
+    </div>
+
+    <!-- 拍照结果模态框 -->
+    <div
+      id="captureModal"
+      class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden"
+    >
+      <div class="bg-white rounded-xl w-11/12 max-w-md overflow-hidden">
+        <div class="p-4 flex justify-between items-center border-b">
+          <h3 class="text-xl font-bold text-dark">你的AR照片</h3>
+          <button
+            id="closeCaptureModal"
+            class="text-gray-500 hover:text-gray-700"
+          >
+            <i class="fa fa-times text-xl"></i>
+          </button>
+        </div>
+        <div class="p-4">
+          <div
+            class="aspect-w-9 aspect-h-16 bg-gray-100 rounded-lg mb-4 overflow-hidden"
+          >
+            <img
+              id="captureResult"
+              src=""
+              alt="AR照片"
+              class="w-full h-full object-cover"
+            />
+          </div>
+          <div class="flex space-x-4">
+            <button
+              id="savePhotoBtn"
+              class="flex-1 py-3 bg-primary text-white rounded-lg font-medium hover:bg-primary/90 transition"
+            >
+              <i class="fa fa-download mr-2"></i>保存照片
+            </button>
+            <button
+              id="sharePhotoBtn"
+              class="flex-1 py-3 bg-secondary text-white rounded-lg font-medium hover:bg-secondary/90 transition"
+            >
+              <i class="fa fa-share-alt mr-2"></i>分享
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // 全局变量
+      let currentPokemon = "pikachu";
+      let isArActive = false;
+
+      // 小精灵模型URL映射
+      const pokemonModels = {
+        pikachu:
+          "https://raw.githack.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb",
+        squirtle:
+          "https://raw.githack.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb",
+        bulbasaur:
+          "https://raw.githack.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb",
+        charmander:
+          "https://raw.githack.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb",
+      };
+
+      // 小精灵名称映射
+      const pokemonNames = {
+        pikachu: "皮卡丘",
+        squirtle: "杰尼龟",
+        bulbasaur: "妙蛙种子",
+        charmander: "小火龙",
+      };
+
+      // 页面加载完成后执行
+      document.addEventListener("DOMContentLoaded", function () {
+        // 模拟加载过程
+        setTimeout(() => {
+          const loadingScreen = document.getElementById("loadingScreen");
+          loadingScreen.style.opacity = "0";
+          setTimeout(() => {
+            loadingScreen.style.display = "none";
+          }, 500);
+        }, 2000);
+
+        // 初始化事件监听
+        initEventListeners();
+      });
+
+      // 初始化事件监听
+      function initEventListeners() {
+        // 开始AR体验按钮
+        document
+          .getElementById("startArBtn")
+          .addEventListener("click", startAR);
+
+        // 关闭AR按钮
+        document.getElementById("closeArBtn").addEventListener("click", stopAR);
+
+        // 拍照按钮
+        document
+          .getElementById("captureBtn")
+          .addEventListener("click", capturePhoto);
+
+        // 关闭拍照结果模态框
+        document
+          .getElementById("closeCaptureModal")
+          .addEventListener("click", closeCaptureModal);
+
+        // 保存照片按钮
+        document
+          .getElementById("savePhotoBtn")
+          .addEventListener("click", savePhoto);
+
+        // 选择小精灵按钮
+        document.querySelectorAll(".select-pokemon").forEach((button) => {
+          button.addEventListener("click", function () {
+            const pokemon = this.getAttribute("data-pokemon");
+            selectPokemon(pokemon);
+            startAR();
+          });
+        });
+      }
+
+      // 选择小精灵
+      function selectPokemon(pokemon) {
+        currentPokemon = pokemon;
+        const entity = document.getElementById("pokemon-entity");
+        if (entity) {
+          entity.setAttribute("gltf-model", pokemonModels[pokemon]);
+        }
+      }
+
+      // 开始AR体验
+      function startAR() {
+        isArActive = true;
+        document.getElementById("ar-container").style.display = "block";
+        // 隐藏主页面内容以节省性能
+        document.querySelector(".min-h-screen").style.display = "none";
+      }
+
+      // 停止AR体验
+      function stopAR() {
+        isArActive = false;
+        document.getElementById("ar-container").style.display = "none";
+        document.querySelector(".min-h-screen").style.display = "block";
+
+        // 停止摄像头
+        const video = document.querySelector("video");
+        if (video && video.srcObject) {
+          video.srcObject.getTracks().forEach((track) => track.stop());
+        }
+      }
+
+      // 拍照
+      function capturePhoto() {
+        const scene = document.querySelector("a-scene");
+        const canvas = scene.components.screenshot.getCanvas("perspective");
+        const dataURL = canvas.toDataURL("image/png");
+
+        document.getElementById("captureResult").src = dataURL;
+        document.getElementById("captureModal").classList.remove("hidden");
+      }
+
+      // 关闭拍照结果模态框
+      function closeCaptureModal() {
+        document.getElementById("captureModal").classList.add("hidden");
+      }
+
+      // 保存照片
+      function savePhoto() {
+        const captureResult = document.getElementById("captureResult");
+        const link = document.createElement("a");
+        link.href = captureResult.src;
+        link.download = `ar-pokemon-${currentPokemon}-${Date.now()}.png`;
+        link.click();
+      }
+    </script>
+  </body>
+</html>

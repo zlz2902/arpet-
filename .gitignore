@@ -1,0 +1,29 @@
+# Gradle
+.gradle/
+**/build/
+build/
+
+# Android Studio / IntelliJ — 个人与机器相关，勿提交
+.idea/
+*.iml
+*.ipr
+*.iws
+captures/
+
+# 本机 Android SDK 路径，勿提交
+local.properties
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 误入仓库的 npm 缓存（与 Android 工程无关）
+npm_cache/
+node_modules/
+
+# 日志
+*.log
+
+# 原生构建缓存（若后续启用 NDK）
+.externalNativeBuild/
+.cxx/
