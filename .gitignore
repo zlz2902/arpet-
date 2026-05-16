@@ -1,3 +1,12 @@
+# iOS / Xcode（与 Android 分开，勿提交本机构建产物）
+ios/**/DerivedData/
+ios/**/*.xcuserstate
+ios/**/xcuserdata/
+
+# 调试时解压 AAR 的临时目录（勿提交）
+.tmp-arsceneview/
+.tmp-sceneview/
+
 # Gradle
 .gradle/
 **/build/

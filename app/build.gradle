@@ -32,12 +32,7 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'com.google.android.material:material:1.9.0'
     implementation 'androidx.constraintlayout:constraintlayout:2.1.4'
-    
-    // ARCore
-    implementation 'com.google.ar:core:1.37.0'
-    
-    // SceneView - 简化 AR 交互的库
-    implementation 'io.github.sceneview:arsceneview:0.10.0'
+    implementation 'androidx.webkit:webkit:1.6.1'
 
     testImplementation 'junit:junit:4.13.2'
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'

@@ -151,6 +151,12 @@ A：可统一用 **GLB/glTF**；加载 API 不同（SceneView vs A-Frame）。
 **Q：我的手机是荣耀 X50 GT（或其它国行荣耀），AR 应用闪退/黑屏？**  
 A：本应用依赖 **Google ARCore**；该机型多数 **未在官方支持列表** 中，且国行常无法完整使用 **Google Play Services for AR**，故原生 AR 可能无法运行。可换一台 ARCore 认证机测试，或先用仓库里的 **`index.html`（WebAR）** 在浏览器里试。说明见 [`docs/AR放置功能测试步骤.md`](docs/AR放置功能测试步骤.md) 第 2 节。
 
+**Q：Gradle Sync 报错 `Unable to find method ... DependencyHandler.module`？**  
+A：多为 **Gradle 版本与 Android Gradle Plugin 7.4.2 不匹配**。本仓库已加入 **Gradle Wrapper**（固定 **Gradle 7.6.4**）。请在 Android Studio 中选用 **Gradle Wrapper**：`File → Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle projects → use Gradle from: 'wrapper'`（表述因版本略有差异），然后 **Sync**。勿让 IDE 使用「默认」过高版本的 Gradle。若命令行运行 `gradlew` 失败，检查系统 **`JAVA_HOME`** 是否指向有效 JDK（建议 JDK 11 或 17，与 Android Studio 内置 JDK 一致）。
+
+**Q：Gradle Sync 报错 `Could not install Gradle distribution` / `SocketTimeoutException: Connect timed out`？**  
+A：**下载 Gradle 压缩包时网络超时**（访问 `services.gradle.org` 在国内经常很慢或被阻断）。本项目已将 Wrapper 的 **`networkTimeout` 调到 5 分钟**，请先 **再 Sync 一次**。若仍失败：① 在 Android Studio 配置 **HTTP Proxy**（`Settings → Appearance & Behavior → System Settings → HTTP Proxy`）或换稳定网络 / 代理；② 换用国内镜像：编辑 `gradle/wrapper/gradle-wrapper.properties`，将 `distributionUrl` 改为镜像地址（例如腾讯云文档提供的 Gradle 镜像，版本路径需与 **7.6.4** 一致），保存后再 Sync；③ 浏览器手动下载同版本的 `gradle-7.6.4-bin.zip`，再按网上教程放入本机 `用户目录\.gradle\wrapper\dists\` 下对应哈希子目录（可先删除该版本未下完的半截文件夹再操作）。
+
 ---
 
 ## 文档维护约定

@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>AR宠物小精灵</title>
+    <style>
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #000;
+        font-family: sans-serif;
+      }
+      #camera {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 0;
+        background: #000;
+      }
+      #pet {
+        position: fixed;
+        left: 50%;
+        top: 45%;
+        transform: translate(-50%, -50%);
+        z-index: 2;
+        font-size: 96px;
+        line-height: 1;
+        filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.45));
+        animation: floatPet 2.2s ease-in-out infinite alternate;
+        pointer-events: none;
+        display: none;
+      }
+      @keyframes floatPet {
+        from {
+          transform: translate(-50%, -50%) translateY(0);
+        }
+        to {
+          transform: translate(-50%, -50%) translateY(-18px);
+        }
+      }
+      #hint {
+        position: fixed;
+        bottom: 28px;
+        left: 0;
+        right: 0;
+        z-index: 2;
+        text-align: center;
+        color: #fff;
+        font-size: 14px;
+        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
+        display: none;
+      }
+      #status {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 9999;
+        padding: 14px 16px;
+        background: rgba(0, 0, 0, 0.8);
+        color: #fff;
+        font-size: 14px;
+        line-height: 1.5;
+        text-align: center;
+      }
+      #status.error {
+        background: rgba(180, 30, 30, 0.92);
+      }
+      .btn-close {
+        position: fixed;
+        top: 24px;
+        right: 24px;
+        z-index: 10000;
+        width: 44px;
+        height: 44px;
+        border: none;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.92);
+        font-size: 22px;
+        line-height: 44px;
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <video id="camera" autoplay playsinline muted></video>
+
+    <div id="pet" aria-hidden="true">🐤</div>
+    <div id="hint">摄像头画面 + AR 宠物叠加（演示模式）</div>
+
+    <div id="status">正在打开相机…</div>
+    <button class="btn-close" type="button" onclick="closeAr()">×</button>
+
+    <script>
+      const statusEl = document.getElementById("status");
+      const videoEl = document.getElementById("camera");
+      const petEl = document.getElementById("pet");
+      const hintEl = document.getElementById("hint");
+      let cameraStream = null;
+
+      function setStatus(text, isError) {
+        statusEl.style.display = "block";
+        statusEl.textContent = text;
+        statusEl.classList.toggle("error", !!isError);
+      }
+
+      function hideStatus() {
+        statusEl.style.display = "none";
+      }
+
+      function notifyError(message) {
+        if (window.AndroidBridge && window.AndroidBridge.onCameraError) {
+          window.AndroidBridge.onCameraError(message);
+        }
+      }
+
+      function closeAr() {
+        if (cameraStream) {
+          cameraStream.getTracks().forEach((t) => t.stop());
+        }
+        window.location.href = "index.html";
+      }
+
+      async function startCamera() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+          const msg = "当前 WebView 不支持相机，请更新系统 WebView 或 Chrome";
+          setStatus(msg, true);
+          notifyError(msg);
+          return;
+        }
+
+        try {
+          cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: "environment" } },
+            audio: false,
+          });
+          videoEl.srcObject = cameraStream;
+
+          const onPlaying = () => {
+            hideStatus();
+            petEl.style.display = "block";
+            hintEl.style.display = "block";
+          };
+
+          videoEl.addEventListener("playing", onPlaying, { once: true });
+          await videoEl.play();
+
+          if (videoEl.videoWidth > 0) {
+            onPlaying();
+          }
+        } catch (e) {
+          const msg =
+            "无法打开相机：" +
+            (e.message || e.name) +
+            "。请到 应用信息 → 权限 → 相机 → 允许";
+          setStatus(msg, true);
+          notifyError(msg);
+        }
+      }
+
+      startCamera();
+    </script>
+  </body>
+</html>
