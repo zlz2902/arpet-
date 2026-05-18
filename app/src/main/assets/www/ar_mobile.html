@@ -7,6 +7,7 @@
       content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
     />
     <title>AR宠物小精灵</title>
+    <script src="js/aframe.min.js"></script>
     <style>
       * {
         box-sizing: border-box;
@@ -18,8 +19,13 @@
         width: 100%;
         height: 100%;
         overflow: hidden;
-        background: #000;
         font-family: sans-serif;
+      }
+      body.preview-mode {
+        background: linear-gradient(160deg, #fff5f5 0%, #f0f4ff 45%, #e8f5e9 100%);
+      }
+      body.camera-mode {
+        background: #000;
       }
       #camera {
         position: fixed;
@@ -30,86 +36,260 @@
         z-index: 0;
         background: #000;
       }
-      #pet {
-        position: fixed;
-        left: 50%;
-        top: 45%;
-        transform: translate(-50%, -50%);
-        z-index: 2;
-        font-size: 96px;
-        line-height: 1;
-        filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.45));
-        animation: floatPet 2.2s ease-in-out infinite alternate;
-        pointer-events: none;
+      body.preview-mode #camera {
         display: none;
       }
-      @keyframes floatPet {
-        from {
-          transform: translate(-50%, -50%) translateY(0);
-        }
-        to {
-          transform: translate(-50%, -50%) translateY(-18px);
-        }
-      }
-      #hint {
+      /* 3D 仅在中部区域渲染，避免挡住顶部文字 */
+      #scene-viewport {
         position: fixed;
-        bottom: 28px;
         left: 0;
         right: 0;
-        z-index: 2;
-        text-align: center;
-        color: #fff;
-        font-size: 14px;
-        text-shadow: 0 1px 4px rgba(0, 0, 0, 0.8);
-        display: none;
+        z-index: 1;
+      }
+      body.preview-mode #scene-viewport {
+        top: 128px;
+        bottom: 168px;
+      }
+      body.camera-mode #scene-viewport {
+        top: 0;
+        bottom: 0;
+      }
+      #scene-viewport a-scene {
+        position: absolute !important;
+        inset: 0 !important;
+        width: 100% !important;
+        height: 100% !important;
+      }
+      body.preview-mode #scene-viewport a-scene {
+        pointer-events: auto;
+      }
+      body.camera-mode #scene-viewport a-scene {
+        pointer-events: none;
+      }
+      #ui-layer {
+        position: fixed;
+        inset: 0;
+        z-index: 10010;
+        pointer-events: none;
+      }
+      #ui-layer button,
+      #ui-layer .btn-close {
+        pointer-events: auto;
       }
       #status {
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
-        z-index: 9999;
+        z-index: 10011;
         padding: 14px 16px;
-        background: rgba(0, 0, 0, 0.8);
+        background: rgba(0, 0, 0, 0.82);
         color: #fff;
         font-size: 14px;
-        line-height: 1.5;
         text-align: center;
+        pointer-events: none;
       }
       #status.error {
         background: rgba(180, 30, 30, 0.92);
       }
+      #top-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        padding: 52px 16px 12px;
+        z-index: 10010;
+        pointer-events: none;
+        text-align: center;
+      }
+      #pet-label {
+        font-size: 18px;
+        font-weight: 700;
+        margin: 0;
+      }
+      body.preview-mode #pet-label {
+        color: #333;
+      }
+      body.camera-mode #pet-label {
+        color: #fff;
+        text-shadow: 0 2px 8px rgba(0, 0, 0, 0.85);
+      }
+      #hint {
+        margin: 6px 0 0;
+        font-size: 13px;
+        color: #666;
+      }
+      body.camera-mode #hint {
+        display: none;
+      }
       .btn-close {
         position: fixed;
-        top: 24px;
-        right: 24px;
-        z-index: 10000;
+        top: 20px;
+        right: 16px;
+        z-index: 10012;
         width: 44px;
         height: 44px;
         border: none;
         border-radius: 50%;
+        background: rgba(255, 255, 255, 0.95);
+        color: #333;
+        font-size: 24px;
+        line-height: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.15);
+        cursor: pointer;
+        -webkit-tap-highlight-color: transparent;
+      }
+      #bottom-bar {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 10010;
+        padding: 10px 12px 20px;
+        pointer-events: none;
+      }
+      body.preview-mode #bottom-bar {
+        background: linear-gradient(transparent, rgba(255, 255, 255, 0.95) 28%);
+      }
+      body.camera-mode #bottom-bar {
+        background: linear-gradient(transparent, rgba(0, 0, 0, 0.75));
+      }
+      #pet-picker {
+        display: none;
+        gap: 10px;
+        margin-bottom: 12px;
+        overflow-x: auto;
+        white-space: nowrap;
+        pointer-events: auto;
+      }
+      #pet-picker button {
+        border: 2px solid transparent;
+        border-radius: 12px;
+        padding: 8px 14px;
         background: rgba(255, 255, 255, 0.92);
-        font-size: 22px;
-        line-height: 44px;
-        text-align: center;
+        color: #222;
+        font-size: 13px;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      }
+      #pet-picker button.active {
+        border-color: #ffde00;
+        background: #fff8d6;
+      }
+      #btn-confirm {
+        display: block;
+        width: 100%;
+        max-width: 360px;
+        margin: 0 auto;
+        padding: 14px 20px;
+        border: none;
+        border-radius: 999px;
+        background: linear-gradient(135deg, #ffde00 0%, #ffb300 100%);
+        color: #333;
+        font-size: 16px;
+        font-weight: 700;
+        box-shadow: 0 4px 16px rgba(255, 179, 0, 0.45);
+        pointer-events: auto;
+        -webkit-tap-highlight-color: transparent;
+      }
+      #btn-confirm:active {
+        transform: scale(0.98);
+      }
+      #toast {
+        position: fixed;
+        left: 50%;
+        bottom: 100px;
+        transform: translateX(-50%);
+        z-index: 10020;
+        padding: 10px 18px;
+        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.78);
+        color: #fff;
+        font-size: 14px;
+        display: none;
+        pointer-events: none;
       }
     </style>
   </head>
-  <body>
+  <body class="preview-mode">
     <video id="camera" autoplay playsinline muted></video>
 
-    <div id="pet" aria-hidden="true">🐤</div>
-    <div id="hint">摄像头画面 + AR 宠物叠加（演示模式）</div>
+    <div id="scene-viewport">
+      <a-scene
+        embedded
+        vr-mode-ui="enabled: false"
+        renderer="alpha: true; antialias: true; colorManagement: true;"
+        background="color: transparent"
+      >
+        <a-light type="ambient" color="#ffffff" intensity="0.85"></a-light>
+        <a-light type="directional" color="#ffffff" intensity="0.65" position="1 2 1"></a-light>
+        <a-entity id="pet-entity" position="0 -0.2 -1.2"></a-entity>
+        <a-entity
+          id="view-camera"
+          camera
+          position="0 0 0"
+          look-controls="enabled: true; touchEnabled: true; magicWindowTrackingEnabled: false"
+          wasd-controls="enabled: false"
+        ></a-entity>
+      </a-scene>
+    </div>
 
-    <div id="status">正在打开相机…</div>
-    <button class="btn-close" type="button" onclick="closeAr()">×</button>
+    <div id="top-bar">
+      <p id="pet-label"></p>
+      <p id="hint">拖动屏幕可旋转视角 · 点击下方切换宠物</p>
+    </div>
+
+    <div id="status">正在加载…</div>
+    <button id="btn-close" class="btn-close" type="button" aria-label="返回首页">×</button>
+
+    <div id="bottom-bar">
+      <div id="pet-picker"></div>
+      <button id="btn-confirm" type="button">确认选择</button>
+    </div>
+
+    <div id="toast"></div>
 
     <script>
+      const USE_AR_CAMERA = false;
+      const PREVIEW_Y_OFFSET = -0.35;
+
       const statusEl = document.getElementById("status");
+      const labelEl = document.getElementById("pet-label");
+      const pickerEl = document.getElementById("pet-picker");
+      const confirmBtn = document.getElementById("btn-confirm");
+      const closeBtn = document.getElementById("btn-close");
+      const toastEl = document.getElementById("toast");
       const videoEl = document.getElementById("camera");
-      const petEl = document.getElementById("pet");
-      const hintEl = document.getElementById("hint");
+      const petEntity = document.getElementById("pet-entity");
       let cameraStream = null;
+      let catalog = { pets: [], homepageMap: {} };
+      let currentPetId = "duck";
+
+      function setBodyMode() {
+        document.body.classList.toggle("preview-mode", !USE_AR_CAMERA);
+        document.body.classList.toggle("camera-mode", USE_AR_CAMERA);
+      }
+
+      function assetUrl(relativePath) {
+        if (window.location.protocol === "file:") {
+          return relativePath;
+        }
+        return (
+          "https://appassets.androidplatform.net/assets/www/" +
+          relativePath.replace(/^\//, "")
+        );
+      }
+
+      function adjustPosition(posStr) {
+        const parts = posStr.trim().split(/\s+/).map(parseFloat);
+        if (!USE_AR_CAMERA && parts.length >= 3) {
+          parts[1] += PREVIEW_Y_OFFSET;
+        }
+        return parts.join(" ");
+      }
 
       function setStatus(text, isError) {
         statusEl.style.display = "block";
@@ -121,57 +301,160 @@
         statusEl.style.display = "none";
       }
 
-      function notifyError(message) {
-        if (window.AndroidBridge && window.AndroidBridge.onCameraError) {
-          window.AndroidBridge.onCameraError(message);
+      function showToast(text) {
+        toastEl.textContent = text;
+        toastEl.style.display = "block";
+        setTimeout(() => {
+          toastEl.style.display = "none";
+        }, 1600);
+      }
+
+      function getQueryPetId() {
+        return new URLSearchParams(window.location.search).get("pet");
+      }
+
+      function findPet(id) {
+        return catalog.pets.find((p) => p.id === id);
+      }
+
+      function applyPet(pet) {
+        if (!pet) return;
+        currentPetId = pet.id;
+        labelEl.textContent = pet.name;
+        setStatus("正在加载 " + pet.name + "…");
+
+        petEntity.removeAttribute("gltf-model");
+        petEntity.setAttribute("gltf-model", assetUrl(pet.model));
+        petEntity.setAttribute("position", adjustPosition(pet.position));
+        petEntity.setAttribute("scale", pet.scale);
+        petEntity.setAttribute("rotation", pet.rotation);
+        petEntity.setAttribute(
+          "animation",
+          "property: rotation; to: 0 360 0; loop: true; dur: 14000; easing: linear"
+        );
+
+        pickerEl.querySelectorAll("button").forEach((btn) => {
+          btn.classList.toggle("active", btn.dataset.pet === pet.id);
+        });
+      }
+
+      function buildPicker() {
+        pickerEl.innerHTML = "";
+        catalog.pets.forEach((pet) => {
+          const btn = document.createElement("button");
+          btn.type = "button";
+          btn.textContent = pet.name;
+          btn.dataset.pet = pet.id;
+          btn.addEventListener("click", () => applyPet(pet));
+          pickerEl.appendChild(btn);
+        });
+        pickerEl.style.display = "flex";
+      }
+
+      function stopCamera() {
+        if (cameraStream) {
+          cameraStream.getTracks().forEach((t) => t.stop());
+          cameraStream = null;
         }
       }
 
-      function closeAr() {
-        if (cameraStream) {
-          cameraStream.getTracks().forEach((t) => t.stop());
+      function goHome() {
+        stopCamera();
+        try {
+          if (window.AndroidBridge && typeof AndroidBridge.goHome === "function") {
+            AndroidBridge.goHome();
+            return;
+          }
+        } catch (e) {
+          /* ignore */
         }
-        window.location.href = "index.html";
+        if (window.history.length > 1) {
+          window.history.back();
+          return;
+        }
+        window.location.replace(assetUrl("index.html"));
+      }
+
+      function confirmSelection() {
+        const pet = findPet(currentPetId);
+        if (!pet) return;
+        confirmBtn.disabled = true;
+        try {
+          localStorage.setItem("selectedPetId", pet.id);
+          localStorage.setItem("selectedPetName", pet.name);
+        } catch (e) {
+          /* ignore */
+        }
+        showToast("已选择「" + pet.name + "」");
+        setTimeout(() => {
+          confirmBtn.disabled = false;
+          goHome();
+        }, 600);
+      }
+
+      closeBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        goHome();
+      });
+      confirmBtn.addEventListener("click", confirmSelection);
+
+      async function loadCatalog() {
+        const res = await fetch(assetUrl("pets.json"));
+        catalog = await res.json();
+        const fromHome = getQueryPetId();
+        const mapped = fromHome && catalog.homepageMap[fromHome]
+          ? catalog.homepageMap[fromHome]
+          : fromHome;
+        const saved = (() => {
+          try {
+            return localStorage.getItem("selectedPetId");
+          } catch (e) {
+            return null;
+          }
+        })();
+        const initialId = mapped || saved || catalog.pets[0]?.id || "duck";
+        buildPicker();
+        applyPet(findPet(initialId) || catalog.pets[0]);
       }
 
       async function startCamera() {
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-          const msg = "当前 WebView 不支持相机，请更新系统 WebView 或 Chrome";
-          setStatus(msg, true);
-          notifyError(msg);
+        if (!navigator.mediaDevices?.getUserMedia) {
+          setStatus("当前 WebView 不支持相机", true);
           return;
         }
-
         try {
           cameraStream = await navigator.mediaDevices.getUserMedia({
             video: { facingMode: { ideal: "environment" } },
             audio: false,
           });
           videoEl.srcObject = cameraStream;
-
-          const onPlaying = () => {
-            hideStatus();
-            petEl.style.display = "block";
-            hintEl.style.display = "block";
-          };
-
-          videoEl.addEventListener("playing", onPlaying, { once: true });
           await videoEl.play();
-
-          if (videoEl.videoWidth > 0) {
-            onPlaying();
-          }
+          hideStatus();
         } catch (e) {
-          const msg =
-            "无法打开相机：" +
-            (e.message || e.name) +
-            "。请到 应用信息 → 权限 → 相机 → 允许";
-          setStatus(msg, true);
-          notifyError(msg);
+          setStatus("无法打开相机：" + (e.message || e.name), true);
         }
       }
 
-      startCamera();
+      petEntity.addEventListener("model-loaded", hideStatus);
+      petEntity.addEventListener("model-error", () => {
+        setStatus("3D 模型加载失败，请重试", true);
+      });
+
+      (async () => {
+        setBodyMode();
+        try {
+          await loadCatalog();
+          if (USE_AR_CAMERA) {
+            setStatus("正在打开相机…");
+            await startCamera();
+          } else {
+            hideStatus();
+          }
+        } catch (e) {
+          setStatus("初始化失败：" + e.message, true);
+        }
+      })();
     </script>
   </body>
 </html>

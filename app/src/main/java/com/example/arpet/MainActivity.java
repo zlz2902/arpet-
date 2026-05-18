@@ -36,6 +36,8 @@ import androidx.webkit.WebViewClientCompat;
 public class MainActivity extends AppCompatActivity {
 
     private static final int REQUEST_CAMERA_PERMISSION = 1001;
+    /** 预览模式不强制相机权限；恢复 AR 相机时改为 true */
+    private static final boolean REQUIRE_CAMERA_FOR_AR_PAGE = false;
     private static final String HOME_PAGE_URL =
             "https://appassets.androidplatform.net/assets/www/index.html";
     private static final String AR_PAGE_URL =
@@ -81,7 +83,7 @@ public class MainActivity extends AppCompatActivity {
             }
         } else if (pendingArPageUrl != null) {
             pendingArPageUrl = null;
-            Toast.makeText(this, "需要相机权限才能进入 AR 体验", Toast.LENGTH_LONG).show();
+            Toast.makeText(this, "需要相机权限才能进入 AR 相机模式", Toast.LENGTH_LONG).show();
         }
     }
 
@@ -151,7 +153,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean openArPage(String url) {
-        if (hasCameraPermission()) {
+        if (!REQUIRE_CAMERA_FOR_AR_PAGE || hasCameraPermission()) {
             return false;
         }
         pendingArPageUrl = url;
@@ -226,6 +228,18 @@ public class MainActivity extends AppCompatActivity {
         @JavascriptInterface
         public void onCameraError(String message) {
             runOnUiThread(() -> showCameraError(message));
+        }
+
+        @JavascriptInterface
+        public void goHome() {
+            runOnUiThread(() -> {
+                showWebContent();
+                if (webView.canGoBack()) {
+                    webView.goBack();
+                } else {
+                    webView.loadUrl(HOME_PAGE_URL);
+                }
+            });
         }
     }
 }

@@ -399,9 +399,16 @@
           <p class="text-xl mb-8 max-w-2xl mx-auto">
             使用增强现实技术，让你喜爱的宠物小精灵出现在你的真实环境中！
           </p>
+          <p
+            id="selectedPetBanner"
+            class="hidden text-lg mb-4 mx-auto max-w-md bg-white/25 rounded-full px-6 py-2"
+          ></p>
           <button id="startArBtn" class="btn-pokemon">
             <i class="fa fa-camera mr-2"></i>开始AR体验
           </button>
+          <p id="homeHint" class="hidden text-sm mt-4 opacity-90">
+            在 App 内查看 3D 模型，请点上方按钮（不会显示在手机系统桌面）
+          </p>
         </div>
       </section>
 
@@ -919,7 +926,30 @@
         }
 
         initEventListeners();
+        updateSelectedPetUI();
+        window.addEventListener("pageshow", updateSelectedPetUI);
       });
+
+      function updateSelectedPetUI() {
+        if (!isInAppShell()) return;
+        let petId = null;
+        let petName = null;
+        try {
+          petId = localStorage.getItem("selectedPetId");
+          petName = localStorage.getItem("selectedPetName");
+        } catch (e) {
+          return;
+        }
+        if (!petId || !petName) return;
+        const banner = document.getElementById("selectedPetBanner");
+        const btn = document.getElementById("startArBtn");
+        const hint = document.getElementById("homeHint");
+        banner.textContent = "当前伙伴：" + petName;
+        banner.classList.remove("hidden");
+        btn.innerHTML =
+          '<i class="fa fa-paw mr-2"></i>查看「' + petName + '」';
+        hint.classList.remove("hidden");
+      }
 
       // 初始化事件监听
       function initEventListeners() {
@@ -968,7 +998,21 @@
       // 开始AR体验
       function startAR() {
         if (isInAppShell()) {
-          window.location.href = "ar_mobile.html";
+          const appPetMap = {
+            pikachu: "fox",
+            squirtle: "duck",
+            bulbasaur: "brainstem",
+            charmander: "fox",
+          };
+          let savedId = null;
+          try {
+            savedId = localStorage.getItem("selectedPetId");
+          } catch (e) {
+            savedId = null;
+          }
+          const petId = savedId || appPetMap[currentPokemon] || "duck";
+          window.location.href =
+            "ar_mobile.html?pet=" + encodeURIComponent(petId);
           return;
         }
         isArActive = true;

@@ -22,6 +22,9 @@ captures/
 # 本机 Android SDK 路径，勿提交
 local.properties
 
+# 项目根目录图标生成源图备份（勿与 app/src/main/assets 混淆）
+/assets/
+
 # 操作系统
 .DS_Store
 Thumbs.db

@@ -968,7 +968,15 @@
       // 开始AR体验
       function startAR() {
         if (isInAppShell()) {
-          window.location.href = "ar_mobile.html";
+          const appPetMap = {
+            pikachu: "fox",
+            squirtle: "duck",
+            bulbasaur: "brainstem",
+            charmander: "fox",
+          };
+          const petId = appPetMap[currentPokemon] || "duck";
+          window.location.href =
+            "ar_mobile.html?pet=" + encodeURIComponent(petId);
           return;
         }
         isArActive = true;

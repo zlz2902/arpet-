@@ -1,0 +1,34 @@
+{
+  "pets": [
+    {
+      "id": "duck",
+      "name": "小黄鸭",
+      "model": "models/duck.glb",
+      "scale": "0.45 0.45 0.45",
+      "position": "0 -0.1 -1.1",
+      "rotation": "0 -30 0"
+    },
+    {
+      "id": "fox",
+      "name": "小狐狸",
+      "model": "models/fox.glb",
+      "scale": "0.012 0.012 0.012",
+      "position": "0 -0.15 -1.6",
+      "rotation": "0 25 0"
+    },
+    {
+      "id": "brainstem",
+      "name": "星云精灵",
+      "model": "models/brainstem.glb",
+      "scale": "0.5 0.5 0.5",
+      "position": "0 -0.2 -1.3",
+      "rotation": "0 45 0"
+    }
+  ],
+  "homepageMap": {
+    "pikachu": "fox",
+    "squirtle": "duck",
+    "bulbasaur": "brainstem",
+    "charmander": "fox"
+  }
+}
